@@ -20,7 +20,15 @@ const userSchema = new mongoose.Schema({
         required: [true,"Password is required for creating an account"],
         minlength: [6,"password should contain more than 6 characters"],
         select: false //by default passsword wont come in the query
+    },
+    systemUser: {
+        type: Boolean,
+        default: false,
+        immutable: true,
+        select: false
+
     }
+
 },{
     timestamps: true //when data is updated we get the timestamps
 })

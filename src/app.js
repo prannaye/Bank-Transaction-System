@@ -22,12 +22,13 @@ app.use(cookieParser())
  */
 const authRouter = require("./routes/auth.routes")
 const accountRouter = require("./routes/account.routes")
-
+const transactionRoutes = require("./routes/transaction.routes")
 /**
  * - Use Routes
  */
 app.use("/api/auth",authRouter)//all requests starting from /api/auth will be redirected to auth Router
 app.use("/api/accounts",accountRouter)
+app.use("/api/transactions",transactionRoutes)
 
 
 module.exports = app //we are exporting the app instance to the server.js
