@@ -100,6 +100,8 @@ async function createTransaction(req,res){
             message: `Insufficient balance. Current balance is ${balance}. Requested amount is ${amount}`
         })
     }
+    let transaction;
+    try{
 
     /**
      * 5.Create Transaction(PENDING)
@@ -107,34 +109,52 @@ async function createTransaction(req,res){
     const session = await mongoose.startSession()
     session.startTransaction()
 
-    const transaction = await transactionModel.create({
+    transaction = (await transactionModel.create([{
         fromAccount,
         toAccount,
         amount,
         idempotencyKey,
         status: "PENDING"
-    },{session})
+    }],{session}))[0]
 
-    const debitLedgerEntry = await ledgerModel.create({
+    const debitLedgerEntry = await ledgerModel.create([{
         account: fromAccount,
         amount: amount,
         transaction: transaction._id,
         type: "DEBIT"
-    },{session})
+    }],{session})
 
-    const creditLedgerEntry = await ledgerModel.create({
+    // await (()=>{
+    //     return new Promise((resolve) => setTimeout(resolve,100*1000))
+    // })()
+
+
+    const creditLedgerEntry = await ledgerModel.create([{
         account: toAccount,
         amount: amount,
         transaction: transaction._id,
         type: "CREDIT"
-    },{session})
+    }],{session})
 
-    transaction.status = "COMPLETED"
-    await transaction.save({session})
+    await transactionModel.findOneAndUpdate(
+        {_id:transaction._id},
+        {status:"COMPLETED"},
+        {session}
+    )
+        
 
     await session.commitTransaction()
     session.endSession()
-
+    }
+    catch(error){
+        await transactionModel.findOneAndUpdate(
+            {idempotencyKey:idempotencyKey},
+            {status:"FAILED"}
+        )
+        return res.status(400).json({
+            message: "Transaction is Pending due to some issue, please retry after some time",
+        })
+    }
     /**
      * 10.Send email Notification
      */
@@ -162,7 +182,7 @@ async function createInitialFundsTransaction(req,res){
     })
 
     if(!toUserAccount){
-        return res.statue(400).json({
+        return res.status(400).json({
             message: "Invalid toAccount"
         })
     }

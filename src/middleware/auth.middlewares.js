@@ -1,7 +1,7 @@
 const userModel = require("../models/user.model")
 const jwt = require("jsonwebtoken")
 //const emailService = require("../services/email.service")
-
+const tokenBlacklistModel = require("../models/blacklist.model")
 
 //is the token comming form cookies or header
 async function authMiddleware(req,res,next){
@@ -12,7 +12,13 @@ async function authMiddleware(req,res,next){
             message: "Unauthorized access, token is missing"
         })
     }
+    const isBlacklisted = await tokenBlacklistModel.findOne({token})
 
+    if(isBlacklisted){
+        return res.status(401).json({
+            message:"Unauthorized access , token is invalid"
+        })
+    }
     try{
         //if token is found
         const decoded = jwt.verify(token,process.env.JWT_SECRET)
@@ -40,7 +46,13 @@ async function authSystemUserMiddleware(req,res,next){
             message: "Unauthorized access , token is missing"
         })
     }
-
+const isBlacklisted = await tokenBlacklistModel.findOne({token})
+if(isBlacklisted){
+        return res.status(401).json({
+            message:"Unauthorized access , token is invalid"
+        })
+    
+    }
     try {
         const decoded = jwt.verify(token,process.env.JWT_SECRET)
         const user = await userModel.findById(decoded.userId).select("+systemUser")
@@ -63,4 +75,5 @@ async function authSystemUserMiddleware(req,res,next){
 module.exports = {
     authMiddleware,
     authSystemUserMiddleware
+
 }
